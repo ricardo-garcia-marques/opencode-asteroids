@@ -1,0 +1,24 @@
+name: Pregunta
+description: Haz una pregunta sobre el juego o el codigo
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de preguntar, revisa el README y el codigo. Si sigues con la duda, este es el sitio.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Tu pregunta
+      description: Formula la pregunta con todo el contexto posible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: Que has probado
+      description: Documentacion, codigo o busquedas que ya revisaste.
+    validations:
+      required: false

@@ -1,0 +1,33 @@
+name: Nueva funcionalidad
+description: Propon una mejora o funcionalidad nueva (feature)
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por proponer una mejora. Cuéntanos qué te gustaría y por qué.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o motivación
+      description: ¿Qué necesitas o qué te gustaría poder hacer que hoy no se puede?
+      placeholder: Me gustaria poder...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Solución propuesta
+      description: Describe la funcionalidad y cómo imaginarias que funcionaria.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: ¿Hay otras formas de conseguir lo mismo?
+    validations:
+      required: false

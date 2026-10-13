@@ -1,0 +1,57 @@
+name: Reporte de error
+description: Reporta un problema con el juego (bug)
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar un error. Completa la siguiente información para que podamos reproducirlo y arreglarlo.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción del problema
+      description: Explica con claridad qué está fallando.
+      placeholder: Al pulsar X, ocurre Y...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducirlo
+      description: Pasos concretos para reproducir el error.
+      placeholder: |
+        1. Abrir index.html
+        2. Pulsar ArrowUp
+        3. Observar el error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamiento esperado
+      description: ¿Qué debería pasar en lugar de lo que ocurre?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      description: Dónde ocurre el problema.
+      placeholder: |
+        - Navegador: Chrome 120
+        - Sistema operativo: Windows 11
+        - Cómo ejecutas el juego: archivo local / npx serve
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Información adicional
+      description: Capturas de pantalla, videos, logs... cualquier cosa que ayude.
+    validations:
+      required: false

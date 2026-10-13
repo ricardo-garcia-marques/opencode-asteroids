@@ -1,0 +1,161 @@
+name: Formatear issue
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: format-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Etiquetar y añadir info para revision
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const title = issue.title || '';
+
+            // Configuracion de tipos
+            const TYPES = {
+              bug: {
+                label: 'bug',
+                color: 'd73a4a',
+                description: 'Algo no funciona como deberia',
+                checklist: [
+                  'He reproducido el problema siguiendo los pasos indicados',
+                  'He incluido navegador y sistema operativo',
+                  'He comprobado que las instrucciones del README aplican (juego local o `npx serve`)',
+                ],
+              },
+              enhancement: {
+                label: 'enhancement',
+                color: 'a2eeef',
+                description: 'Propuesta de mejora o funcionalidad nueva',
+                checklist: [
+                  'He buscado issues similares abiertos o cerrados',
+                  'He descrito el beneficio o caso de uso de la propuesta',
+                ],
+              },
+              question: {
+                label: 'question',
+                color: 'd876e3',
+                description: 'Pregunta sobre uso o funcionamiento',
+                checklist: [
+                  'He revisado el README y la documentacion disponible',
+                ],
+              },
+            };
+
+            // 1. Detectar tipo
+            let detected = null;
+
+            if (issue.labels && issue.labels.length > 0) {
+              for (const l of issue.labels) {
+                for (const key of Object.keys(TYPES)) {
+                  if (l.name.toLowerCase() === key) detected = key;
+                }
+              }
+            }
+
+            if (!detected) {
+              const text = (title + '\n' + body).toLowerCase();
+              if (/bug|error|fallo|crash|no funciona|falla|rompe/.test(text)) {
+                detected = 'bug';
+              } else if (/feature|funcionalidad|mejora|sugerencia|propon|añadir|agregar|idea/.test(text)) {
+                detected = 'enhancement';
+              } else if (/como|duda|pregunta|question|se puede|es posible|por que|¿/.test(text)) {
+                detected = 'question';
+              } else {
+                detected = 'bug';
+              }
+            }
+            core.info(`Tipo detectado: ${detected}`);
+            const type = TYPES[detected];
+
+            // 2. Asegurar que la label existe (crearla si no)
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: type.label,
+              });
+            } catch (e) {
+              if (e.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: type.label,
+                  color: type.color,
+                  description: type.description,
+                });
+                core.info(`Label creada: ${type.label}`);
+              } else {
+                throw e;
+              }
+            }
+
+            // 3. Añadir label al issue
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: [type.label],
+            });
+
+            // 4. Obtener SHA actual de main
+            let sha = 'desconocido';
+            try {
+              const res = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: context.repo.default_branch,
+              });
+              sha = res.data.commit.sha.substring(0, 7);
+            } catch (e) {
+              core.warning(`No se pudo obtener el SHA de ${context.repo.default_branch}: ${e.message}`);
+            }
+
+            const created = new Date(context.payload.issue.created_at);
+            const fecha = created.toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
+
+            const checklist = type.checklist.map((c) => `- [ ] ${c}`).join('\n');
+
+            // 5. Añadir seccion de info sin modificar el texto original
+            const extra = [
+              '',
+              '---',
+              '',
+              '## 📋 Info para revision',
+              '',
+              '| Campo | Valor |',
+              '|-------|-------|',
+              `| Reportado por | @${issue.user.login} |`,
+              `| Fecha | ${fecha} |`,
+              `| Enlace al issue | ${issue.html_url} |`,
+              `| Commit activo en \`${context.repo.default_branch}\` | \`${sha}\` |`,
+              '',
+              '### Checklist de verificacion',
+              '',
+              checklist,
+              '',
+              '> ℹ️ El texto original del issue se conserva integro arriba; esta seccion es solo informativa para quien lo revise.',
+              '',
+            ].join('\n');
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: body + extra,
+            });
+
+            core.info(`Issue #${issue.number} formateado con label "${type.label}"`);
