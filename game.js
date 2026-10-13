@@ -40,6 +40,9 @@ const SKINS = [
   { name: 'Dorada', color: '#fc0', glow: '#fa0', fill: 'rgba(255,200,0,0.25)',
     flame: 'rgba(120,200,255,0.85)', tail: -10,
     shape: [[20, 0], [0, -6], [-10, 0], [0, 6]] },
+  { name: 'Morada', color: '#a020f0', glow: '#a020f0', flame: 'rgba(200,120,255,0.85)',
+    tail: -14, scale: 2, scoreMultiplier: 2,
+    shape: [[20, 0], [-12, -9], [-7, 0], [-12, 9]] },
 ];
 const SKIN_KEY = 'asteroids.skin';
 let skinIndex = 0;
@@ -52,6 +55,11 @@ function cycleSkin(dir) {
   skinIndex = (skinIndex + dir + SKINS.length) % SKINS.length;
   try { localStorage.setItem(SKIN_KEY, skinIndex); } catch (e) {}
 }
+
+const skinScale      = () => SKINS[skinIndex].scale || 1;
+const scoreMultiplier = () => SKINS[skinIndex].scoreMultiplier || 1;
+
+function addScore(points) { score += points * scoreMultiplier(); }
 
 function traceShape(shape, scale = 1) {
   ctx.beginPath();
@@ -238,7 +246,6 @@ class Ship {
     this.angle  = -Math.PI / 2;
     this.vx     = 0;
     this.vy     = 0;
-    this.radius = 12;
     this.thrusting       = false;
     this.invincible      = 3;
     this.shootCooldown   = 0;
@@ -249,6 +256,9 @@ class Ship {
   }
 
   get shielded() { return this.shieldTimer > 0; }
+
+  get scale()  { return skinScale(); }
+  get radius() { return 12 * this.scale; }
 
   update(dt) {
     if (this.dead) return;
@@ -280,7 +290,7 @@ class Ship {
   tryShoot() {
     if (this.shootCooldown > 0 || this.dead) return [];
     this.shootCooldown = 0.2;
-    const NOSE = 21;
+    const NOSE = 21 * this.scale;
     const ox = this.x + Math.cos(this.angle) * NOSE;
     const oy = this.y + Math.sin(this.angle) * NOSE;
     if (this.tripleTimer > 0) {
@@ -292,6 +302,8 @@ class Ship {
 
   draw() {
     if (this.dead) return;
+    const skin = SKINS[skinIndex];
+    const scale = this.scale;
     if (this.shielded && !(this.shieldTimer < 2 && Math.floor(this.shieldTimer * 8) % 2 === 0)) {
       ctx.save();
       ctx.strokeStyle = '#4f8';
@@ -299,7 +311,7 @@ class Ship {
       ctx.shadowBlur  = 12;
       ctx.lineWidth   = 1.5;
       ctx.beginPath();
-      ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+      ctx.arc(this.x, this.y, 20 * scale, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -309,7 +321,7 @@ class Ship {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    const skin = SKINS[skinIndex];
+    ctx.scale(scale, scale);
     ctx.strokeStyle = skin.color;
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
@@ -510,7 +522,7 @@ function explodeBonus(x, y) {
 function absorbHit(obj) {
   ship.shieldTimer = 0;
   obj.dead = true;
-  if (obj instanceof Asteroid) score += POINTS[obj.size];
+  if (obj instanceof Asteroid) addScore(POINTS[obj.size]);
   for (let i = 0; i < 16; i++)
     particles.push(new Particle(obj.x, obj.y, '80,255,136', 60, 180));
 }
@@ -581,7 +593,7 @@ function update(dt) {
       if (!a.dead && !b.dead && dist(b, a) < a.radius) {
         b.dead = true;
         a.dead = true;
-        score += POINTS[a.size];
+        addScore(POINTS[a.size]);
         explode(a.x, a.y, a.size * 5);
         // Chance de que un asteroide grande libere una estrella fugaz
         if (a.size === 3 && Math.random() < 0.1) {
@@ -608,7 +620,7 @@ function update(dt) {
       if (!s.dead && !b.dead && dist(b, s) < s.radius * 0.85) {
         b.dead = true;
         s.dead = true;
-        score += BONUS_POINTS;
+        addScore(BONUS_POINTS);
         explodeBonus(s.x, s.y);
       }
     }
