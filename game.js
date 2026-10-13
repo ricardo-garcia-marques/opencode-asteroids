@@ -210,6 +210,7 @@ class Ship {
     this.invincible      = 3;
     this.shootCooldown   = 0;
     this.speedBoostTimer = 0;
+    this.tripleTimer     = 0;
     this.dead            = false;
   }
 
@@ -218,6 +219,7 @@ class Ship {
     if (this.invincible       > 0) this.invincible       -= dt;
     if (this.shootCooldown    > 0) this.shootCooldown    -= dt;
     if (this.speedBoostTimer  > 0) this.speedBoostTimer  -= dt;
+    if (this.tripleTimer      > 0) this.tripleTimer      -= dt;
 
     const ROT   = 3.5;   // rad/s
     const THRUST = this.speedBoostTimer > 0 ? 520 : 260;
@@ -244,6 +246,10 @@ class Ship {
     const NOSE = 21;
     const ox = this.x + Math.cos(this.angle) * NOSE;
     const oy = this.y + Math.sin(this.angle) * NOSE;
+    if (this.tripleTimer > 0) {
+      const SPREAD = 0.21;   // ~12°
+      return [-SPREAD, 0, SPREAD].map(d => new Bullet(ox, oy, this.angle + d));
+    }
     return [new Bullet(ox, oy, this.angle)];
   }
 
@@ -347,7 +353,7 @@ class PowerUp {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.strokeStyle = '#0ff';
+    ctx.strokeStyle = this.type === 'triple' ? '#f80' : '#0ff';
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -356,11 +362,18 @@ class PowerUp {
     const s = this.size;
     ctx.strokeRect(-s, -s, s * 2, s * 2);
 
-    // "V" con vértice hacia abajo
     ctx.beginPath();
-    ctx.moveTo(-7, -7);
-    ctx.lineTo(0, 7);
-    ctx.lineTo(7, -7);
+    if (this.type === 'triple') {
+      // Abanico de tres líneas
+      ctx.moveTo(0, 5); ctx.lineTo(-5, -5);
+      ctx.moveTo(0, 5); ctx.lineTo(0, -6);
+      ctx.moveTo(0, 5); ctx.lineTo(5, -5);
+    } else {
+      // "V" con vértice hacia abajo
+      ctx.moveTo(-7, -7);
+      ctx.lineTo(0, 7);
+      ctx.lineTo(7, -7);
+    }
     ctx.stroke();
 
     ctx.restore();
@@ -503,7 +516,7 @@ function update(dt) {
           newAsteroids.push(...a.split());
         }
         if (Math.random() < 0.15) {
-          powerups.push(new PowerUp(a.x, a.y, 'speed'));
+          powerups.push(new PowerUp(a.x, a.y, Math.random() < 0.5 ? 'speed' : 'triple'));
         }
       }
     }
@@ -529,7 +542,8 @@ function update(dt) {
   for (const p of powerups) {
     if (!p.dead && dist(ship, p) < ship.radius + p.radius) {
       p.dead = true;
-      ship.speedBoostTimer = 5;
+      if (p.type === 'triple') ship.tripleTimer = 5;
+      else ship.speedBoostTimer = 5;
     }
   }
 
@@ -602,6 +616,18 @@ function drawHUD() {
     ctx.strokeRect(x, y, barW, barH);
     ctx.fillStyle = '#0ff';
     ctx.fillRect(x, y, barW * (ship.speedBoostTimer / 5), barH);
+  }
+
+  if (ship.tripleTimer > 0) {
+    const oy = 30;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f80';
+    ctx.fillText(`TRIPLE: ${ship.tripleTimer.toFixed(1)}s`, 14, 46 + (ship.speedBoostTimer > 0 ? oy : 0));
+    const y = 50 + (ship.speedBoostTimer > 0 ? oy : 0);
+    ctx.strokeStyle = '#f80';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(14, y, 100, 6);
+    ctx.fillRect(14, y, 100 * (ship.tripleTimer / 5), 6);
   }
 }
 
