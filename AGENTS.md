@@ -23,6 +23,7 @@ Vanilla JS Asteroids clone using HTML5 Canvas. Single file (`game.js`), no depen
 - `ArrowLeft/Right` — rotate
 - `ArrowUp` — thrust
 - `Space` — shoot (with cooldown)
+- `A` / `S` — previous / next ship skin (saved in localStorage `asteroids.skin`)
 
 ## Scoring
 | Size | Points |
